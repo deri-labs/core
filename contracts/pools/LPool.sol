@@ -30,7 +30,7 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         setWhitelistToken(_defaultWhitelistToken, true);
     }
 
-    function buyLP(address _tokenIn, uint256 _amountIn) external payable nonReentrant whenNotPaused {
+    function buyLP(address _tokenIn, uint256 _amountIn) public virtual payable nonReentrant whenNotPaused {
         require(_amountIn > 0, "LPool: amount must be greater than zero");
         require(whitelistTokens[_tokenIn], "LPool: token not in whitelist");
 
@@ -47,7 +47,7 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         emit BuyLP(msg.sender, _tokenIn, _amountIn, _amountD18);
     }
 
-    function redeemLP(address _tokenOut, uint256 _amount) external payable nonReentrant {
+    function redeemLP(address _tokenOut, uint256 _amount) public virtual payable nonReentrant {
         require(_amount > 0, "LPool: amount must be greater than zero");
 
         uint256 _aum = aum();
@@ -59,7 +59,7 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         emit RedeemLP(msg.sender, _tokenOut, _amountOut, _amountD18);
     }
 
-    function aum() public view returns (uint256 _aum) {
+    function aum() public virtual view returns (uint256 _aum) {
         for (uint256 i = 0; i < tokenList.length; i++) {
             address _token = tokenList[i];
             uint256 _balance = IERC20(_token).balanceOf(address(this));
@@ -68,13 +68,13 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         }
     }
 
-    function lpPrice() external view returns (uint256) {
+    function lpPrice() public virtual view returns (uint256) {
         uint256 _aum = aum();
         if (_aum == 0) return 10 ** 8;
         return aum() * 10 ** 8 / lpToken.totalSupply(); // d8
     }
 
-    function setWhitelistToken(address _token, bool _enabled) public onlyOwner {
+    function setWhitelistToken(address _token, bool _enabled) public virtual onlyOwner {
         whitelistTokens[_token] = _enabled;
         bool _match = false;
         for (uint256 i = 0; i < tokenList.length; i++) {
@@ -90,15 +90,15 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         if (!_match && _enabled) tokenList.push(_token);
     }
 
-    function setCap(uint256 _cap) external onlyOwner {
+    function setCap(uint256 _cap) public virtual onlyOwner {
         cap = _cap;
     }
 
-    function setFee(uint256 _fee) external onlyOwner {
+    function setFee(uint256 _fee) public virtual onlyOwner {
         fee = _fee;
     }
 
-    function setPaused(bool _paused) external onlyOwner {
+    function setPaused(bool _paused) public virtual onlyOwner {
         if (_paused) {
             _pause();
         } else {
@@ -106,16 +106,16 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         }
     }
 
-    function setManager(address manager, bool enabled) external onlyOwner {
+    function setManager(address manager, bool enabled) public virtual onlyOwner {
         isManager[manager] = enabled;
     }
 
-    function transfer(address _token, uint256 _amount, address _receiver) external {
+    function transfer(address _token, uint256 _amount, address _receiver) public virtual {
         require(isManager[msg.sender], "LPool: not manager");
         IERC20(_token).safeTransfer(_receiver, _amount);
     }
 
-    function configurePointsOperator(address _blastPointsAddr, address _pointsOperator) external onlyOwner {
+    function configurePointsOperator(address _blastPointsAddr, address _pointsOperator) public virtual onlyOwner {
         IBlastPoints(_blastPointsAddr).configurePointsOperator(_pointsOperator);
     }
 

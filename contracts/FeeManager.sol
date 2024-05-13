@@ -31,7 +31,7 @@ contract FeeManager is Ownable {
         usdToken = _usdToken;
     }
 
-    function distributeFee(address[] calldata receivers, uint256[] calldata ratios) external onlyKeeper {
+    function distributeFee(address[] calldata receivers, uint256[] calldata ratios) public virtual onlyKeeper {
         require(receivers.length == ratios.length, "FeeManager: invalid params");
 
         uint256 _totalFee = vault.vaultFee();
@@ -47,7 +47,7 @@ contract FeeManager is Ownable {
         vault.feeCallback();
     }
 
-    function balancePnl(address _lPool) external onlyKeeper {
+    function balancePnl(address _lPool) public virtual onlyKeeper {
         int256 pnl = vault.vaultPnl();
         require(pnl != 0, "FeeManager: balanced");
         if (pnl > 0) {
@@ -65,7 +65,7 @@ contract FeeManager is Ownable {
         return _amount / (10 ** (30 - IERC20Metadata(_token).decimals()));
     }
 
-    function setKeeper(address _account, bool _enabled) external onlyOwner {
+    function setKeeper(address _account, bool _enabled) public virtual onlyOwner {
         isKeeper[_account] = _enabled;
     }
 }

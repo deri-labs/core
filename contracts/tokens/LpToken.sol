@@ -13,15 +13,15 @@ abstract contract LpToken is ERC20, Ownable {
         _;
     }
 
-    function mint(address to, uint256 amount) external onlyManager {
+    function mint(address to, uint256 amount) public virtual onlyManager {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) external onlyManager {
+    function burn(address from, uint256 amount) public virtual onlyManager {
         _burn(from, amount);
     }
 
-    function setManager(address manager, bool enabled) external onlyOwner {
+    function setManager(address manager, bool enabled) public virtual onlyOwner {
         isManager[manager] = enabled;
     }
 }

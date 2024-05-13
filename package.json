@@ -1,6 +1,6 @@
 {
   "name": "@deri-labs/core",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -22,19 +22,21 @@
     "type": "git",
     "url": "https://github.com/deri-labs/core.git"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@openzeppelin/contracts": "4.9.6",
     "@deri-labs/x-oracle": "^1.1.6",
+    "@pythnetwork/pyth-sdk-solidity": "^2.2.1",
+    "@layerzerolabs/solidity-examples": "^0.0.13"
+  },
+  "devDependencies": {
     "@layerzerolabs/scan-client": "^0.0.6",
-    "@layerzerolabs/solidity-examples": "^0.0.13",
     "@matterlabs/hardhat-zksync-deploy": "^0.6.3",
     "@matterlabs/hardhat-zksync-solc": "^0.3.14",
     "@matterlabs/hardhat-zksync-verify": "0.1.7",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "4.9.6",
     "@pythnetwork/pyth-evm-js": "^1.10.0",
-    "@pythnetwork/pyth-sdk-solidity": "^2.2.1",
     "@typechain/ethers-v5": "^7.0.1",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.21",

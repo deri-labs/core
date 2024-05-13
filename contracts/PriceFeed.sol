@@ -19,7 +19,7 @@ contract PriceFeed is IPriceFeed, Ownable {
         validTime = 3 seconds;
     }
 
-    function getPrice(address _token, bool _maximise, bool _fresh) external override view returns (uint256) {
+    function getPrice(address _token, bool _maximise, bool _fresh) public virtual override view returns (uint256) {
         if (isStableToken[_token])
             return 1e30;
         bytes32 _feedId = feedIds[_token];
@@ -55,37 +55,37 @@ contract PriceFeed is IPriceFeed, Ownable {
         return _price * 10 ** _exponent;
     }
 
-    function latestTime(address _token) external view returns (uint256 _diff) {
+    function latestTime(address _token) public virtual view returns (uint256 _diff) {
         PythStructs.Price memory _feed = pyth.getPriceUnsafe(feedIds[_token]);
         _diff = block.timestamp - _feed.publishTime;
     }
 
-    function getUpdateFee(bytes[] calldata _updateData, address _token) external override view returns (uint256) {
+    function getUpdateFee(bytes[] calldata _updateData, address _token) public virtual override view returns (uint256) {
         if (feedIds[_token] == 0)
             return 0;
         return pyth.getUpdateFee(_updateData);
     }
 
-    function updatePriceFeeds(bytes[] calldata _updateData, address _token) external override payable {
+    function updatePriceFeeds(bytes[] calldata _updateData, address _token) public virtual override payable {
         if (feedIds[_token] == 0)
             xOracle.updatePrice(_updateData);
         else
             pyth.updatePriceFeeds{value: msg.value}(_updateData);
     }
 
-    function setPyth(address _pyth) external onlyOwner {
+    function setPyth(address _pyth) public virtual onlyOwner {
         pyth = IPyth(_pyth);
     }
 
-    function setXOracle(address _xOracle) external onlyOwner {
+    function setXOracle(address _xOracle) public virtual onlyOwner {
         xOracle = IXOracle(_xOracle);
     }
 
-    function setValidTime(uint256 _validTime) external onlyOwner {
+    function setValidTime(uint256 _validTime) public virtual onlyOwner {
         validTime = _validTime;
     }
 
-    function setFeedIds(address[] calldata _tokens, bytes32[] calldata _feedIds) external onlyOwner {
+    function setFeedIds(address[] calldata _tokens, bytes32[] calldata _feedIds) public virtual onlyOwner {
         require(_tokens.length == _feedIds.length, "PriceFeed: invalid feedIds");
         for (uint256 i = 0; i < _tokens.length; i++)
             feedIds[_tokens[i]] = _feedIds[i];
@@ -97,7 +97,7 @@ contract PriceFeed is IPriceFeed, Ownable {
         }
     }
 
-    function setStableToken(address _token, bool _isStableToken) external onlyOwner {
+    function setStableToken(address _token, bool _isStableToken) public virtual onlyOwner {
         isStableToken[_token] = _isStableToken;
     }
 

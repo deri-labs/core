@@ -80,7 +80,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         uint256 _collateralDelta,
         uint256 _sizeDelta,
         bool _isLong
-    ) external override nonReentrant onlyManager {
+    ) public virtual override nonReentrant onlyManager {
         require(collateralTokens[_collateralToken], "invalid collateral token");
         require(indexTokens[_indexToken], "invalid index token");
 
@@ -133,7 +133,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         uint256 _sizeDelta,
         bool _isLong,
         address _receiver
-    ) external override nonReentrant onlyManager returns (uint256) {
+    ) public virtual override nonReentrant onlyManager returns (uint256) {
         return _decreasePosition(_account, _collateralToken, _indexToken, _collateralDelta, _sizeDelta, _isLong, _receiver);
     }
 
@@ -148,7 +148,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _collateralToken,
         address _indexToken,
         bool _isLong
-    ) external override nonReentrant onlyManager returns (uint256) {
+    ) public virtual override nonReentrant onlyManager returns (uint256) {
         updateCumulativeFundingRate(_isLong);
         bytes32 key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         DataTypes.Position storage position = positions[key];
@@ -178,7 +178,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _indexToken,
         bool _isLong,
         bool _raise
-    ) public view returns (uint256, uint256, int256 _userDelta) {
+    ) public virtual view returns (uint256, uint256, int256 _userDelta) {
         (uint256 size, uint256 collateral, uint256 averagePrice, uint256 entryFundingRate, , , ,
             uint256 lastIncreasedTime) = getPosition(_account, _collateralToken, _indexToken, _isLong);
         (bool hasProfit, uint256 delta) = getDelta(_indexToken, size, averagePrice, _isLong, lastIncreasedTime);
@@ -206,7 +206,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         return (0, 0, 0);
     }
 
-    function updateCumulativeFundingRate(bool _isLong) public {
+    function updateCumulativeFundingRate(bool _isLong) public virtual {
         if (lastFundingTimes[_isLong] == 0) {
             lastFundingTimes[_isLong] = block.timestamp.div(fundingInterval).mul(fundingInterval);
             return;
@@ -364,7 +364,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         return _nextPrice.mul(nextSize).div(divisor);
     }
 
-    function getNextFundingRate(bool _isLong) public override view returns (uint256) {
+    function getNextFundingRate(bool _isLong) public virtual override view returns (uint256) {
         if (lastFundingTimes[_isLong].add(fundingInterval) > block.timestamp)
             return 0;
         uint256 intervals = block.timestamp.sub(lastFundingTimes[_isLong]).div(fundingInterval);
@@ -376,7 +376,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _collateralToken,
         address _indexToken,
         bool _isLong
-    ) public pure returns (bytes32) {
+    ) public virtual pure returns (bytes32) {
         return keccak256(abi.encodePacked(_account, _collateralToken, _indexToken, _isLong));
     }
 
@@ -385,7 +385,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _collateralToken,
         address _indexToken,
         bool _isLong
-    ) public override view returns (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256) {
+    ) public virtual override view returns (uint256, uint256, uint256, uint256, uint256, uint256, bool, uint256) {
         bytes32 key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         DataTypes.Position memory position = positions[key];
         uint256 realisedPnl = position.realisedPnl > 0 ? uint256(position.realisedPnl) : uint256(- position.realisedPnl);
@@ -398,7 +398,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _collateralToken,
         address _indexToken,
         bool _isLong
-    ) public view returns (bool, uint256) {
+    ) public virtual view returns (bool, uint256) {
         bytes32 key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         DataTypes.Position memory position = positions[key];
         return getDelta(_indexToken, position.size, position.averagePrice, _isLong, position.lastIncreasedTime);
@@ -409,25 +409,25 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         address _collateralToken,
         address _indexToken,
         bool _isLong
-    ) public override view returns (bool exist, bytes32 key) {
+    ) public virtual override view returns (bool exist, bytes32 key) {
         key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         exist = positions[key].size > 0;
     }
 
-    function getFundingFee(bool _isLong, uint256 _size, uint256 _entryFundingRate) public view returns (uint256) {
+    function getFundingFee(bool _isLong, uint256 _size, uint256 _entryFundingRate) public virtual view returns (uint256) {
         if (_size == 0) return 0;
         uint256 fundingRate = cumulativeFundingRates[_isLong].sub(_entryFundingRate);
         if (fundingRate == 0) return 0;
         return _size.mul(fundingRate).div(FUNDING_RATE_PRECISION);
     }
 
-    function getMaxPrice(address _token) public override view returns (uint256) {
+    function getMaxPrice(address _token) public virtual override view returns (uint256) {
         if (equityTokens[_token])
             return IPriceFeed(priceFeed).getPrice(_token, true, false);
         return IPriceFeed(priceFeed).getPrice(_token, true, true);
     }
 
-    function getMinPrice(address _token) public override view returns (uint256) {
+    function getMinPrice(address _token) public virtual override view returns (uint256) {
         if (equityTokens[_token])
             return IPriceFeed(priceFeed).getPrice(_token, false, false);
         return IPriceFeed(priceFeed).getPrice(_token, false, true);
@@ -439,7 +439,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         uint256 _averagePrice,
         bool _isLong,
         uint256 _lastIncreasedTime
-    ) public override view returns (bool, uint256) {
+    ) public virtual override view returns (bool, uint256) {
         require(_averagePrice > 0, "Vault: invalid _averagePrice");
         uint256 price = _isLong ? getMinPrice(_indexToken) : getMaxPrice(_indexToken);
         uint256 priceDelta = _averagePrice > price ? _averagePrice.sub(price) : price.sub(_averagePrice);
@@ -457,72 +457,72 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         return (hasProfit, delta);
     }
 
-    function usdToToken(address _token, uint256 _usdAmount) public view returns (uint256) {
+    function usdToToken(address _token, uint256 _usdAmount) public virtual view returns (uint256) {
         if (_usdAmount == 0) return 0;
         return _usdAmount.mul(10 ** IERC20Metadata(_token).decimals()).div(getMaxPrice(_token));
     }
 
-    function tokenToUsd(address _token, uint256 _tokenAmount) public override view returns (uint256) {
+    function tokenToUsd(address _token, uint256 _tokenAmount) public virtual override view returns (uint256) {
         if (_tokenAmount == 0) return 0;
         return _tokenAmount.mul(getMinPrice(_token)).div(10 ** IERC20Metadata(_token).decimals());
     }
 
-    function getPositionFee(uint256 _sizeDelta) public view returns (uint256) {
+    function getPositionFee(uint256 _sizeDelta) public virtual view returns (uint256) {
         if (_sizeDelta == 0) return 0;
         return _sizeDelta.mul(marginFeeBasisPoints).div(BASIS_POINTS_DIVISOR);
     }
 
-    function setManager(address _manager, bool _isManager) external override onlyOwner {
+    function setManager(address _manager, bool _isManager) public virtual override onlyOwner {
         isManager[_manager] = _isManager;
     }
 
-    function setPriceFeed(address _priceFeed) external override onlyOwner {
+    function setPriceFeed(address _priceFeed) public virtual override onlyOwner {
         priceFeed = _priceFeed;
     }
 
-    function setMaxLeverage(uint256 _maxLeverage) external override onlyOwner {
+    function setMaxLeverage(uint256 _maxLeverage) public virtual override onlyOwner {
         require(_maxLeverage > 10000, "Vault: invalid _maxLeverage");
         maxLeverage = _maxLeverage;
     }
 
-    function setMarginFeeBasisPoints(uint256 _marginFeeBasisPoints) external onlyOwner {
+    function setMarginFeeBasisPoints(uint256 _marginFeeBasisPoints) public virtual onlyOwner {
         require(_marginFeeBasisPoints <= 500, "Vault: invalid _marginFeeBasisPoints"); // 5%
         marginFeeBasisPoints = _marginFeeBasisPoints;
     }
 
-    function setMinProfit(uint256 _minProfitBasisPoints, uint256 _minProfitTime) external onlyOwner {
+    function setMinProfit(uint256 _minProfitBasisPoints, uint256 _minProfitTime) public virtual onlyOwner {
         minProfitBasisPoints = _minProfitBasisPoints;
         minProfitTime = _minProfitTime;
     }
 
-    function setFundingRate(uint256 _fundingInterval, uint256 _longFundingRate, uint256 _shortFundingRate) external override onlyOwner {
+    function setFundingRate(uint256 _fundingInterval, uint256 _longFundingRate, uint256 _shortFundingRate) public virtual override onlyOwner {
         fundingInterval = _fundingInterval;
         fundingRates[true] = _longFundingRate;
         fundingRates[false] = _shortFundingRate;
     }
 
-    function setCollateralToken(address _token, bool _isCollateral) external onlyOwner {
+    function setCollateralToken(address _token, bool _isCollateral) public virtual onlyOwner {
         collateralTokens[_token] = _isCollateral;
     }
 
-    function setIndexToken(address _token, bool _isIndex) external onlyOwner {
+    function setIndexToken(address _token, bool _isIndex) public virtual onlyOwner {
         indexTokens[_token] = _isIndex;
     }
 
-    function setEquityToken(address _token, bool _isEquity) external onlyOwner {
+    function setEquityToken(address _token, bool _isEquity) public virtual onlyOwner {
         equityTokens[_token] = _isEquity;
     }
 
-    function withdraw(address _token, address _receiver, uint256 _amount) external override onlyManager {
+    function withdraw(address _token, address _receiver, uint256 _amount) public virtual override onlyManager {
         _transferOut(_token, _amount, _receiver);
         emit Events.Withdraw(_token, _amount, _receiver);
     }
 
-    function feeCallback() external onlyManager {
+    function feeCallback() public virtual onlyManager {
         vaultFee = 0;
     }
 
-    function pnlCallback() external onlyManager {
+    function pnlCallback() public virtual onlyManager {
         vaultPnl = 0;
     }
 

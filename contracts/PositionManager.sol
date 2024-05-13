@@ -59,7 +59,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         bool _isLong,
         uint256 _acceptablePrice,
         bytes[] calldata _updateData
-    ) external payable nonReentrant {
+    ) public virtual payable nonReentrant {
         uint256 _fee = _update(_updateData, _indexToken);
         _preChargeFee(msg.sender, _collateralToken, _indexToken, _isLong, _fee);
         IERC20(_collateralToken).safeTransferFrom(msg.sender, vault, _collateralDelta);
@@ -93,7 +93,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         address _receiver,
         uint256 _acceptablePrice,
         bytes[] calldata _updateData
-    ) external payable nonReentrant {
+    ) public virtual payable nonReentrant {
         _update(_updateData, _indexToken);
         address _vault = vault;
         uint256 markPrice = _isLong ? IVault(_vault).getMinPrice(_indexToken) : IVault(_vault).getMaxPrice(_indexToken);
@@ -122,7 +122,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         bool _isLong,
         address payable _feeReceiver,
         bytes[] calldata _updateData
-    ) external payable nonReentrant {
+    ) public virtual payable nonReentrant {
         require(isKeeper[msg.sender] || msg.sender == _account, "PositionManager: forbidden");
         _update(_updateData, _indexToken);
         uint256 _amount = IVault(vault).liquidatePosition(_account, _collateralToken, _indexToken, _isLong);
@@ -142,7 +142,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         uint256 _orderIndex,
         address payable _feeReceiver,
         bytes[] calldata _updateData
-    ) external payable {
+    ) public virtual payable {
         require(isKeeper[msg.sender], "PositionManager: forbidden");
         (,,address _indexToken,,,,,)= IOrderBook(orderBook).getIncreaseOrder(_account, _orderIndex);
         _update(_updateData, _indexToken);
@@ -161,7 +161,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         uint256 _orderIndex,
         address payable _feeReceiver,
         bytes[] calldata _updateData
-    ) external payable {
+    ) public virtual payable {
         require(isKeeper[msg.sender], "PositionManager: forbidden");
         (,,address _indexToken,,,,,)= IOrderBook(orderBook).getDecreaseOrder(_account, _orderIndex);
         _update(_updateData, _indexToken);
@@ -240,15 +240,15 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         require(sent, "PositionManager: failed to transfer out ether");
     }
 
-    function setKeeper(address _account, bool _isActive) external onlyOwner {
+    function setKeeper(address _account, bool _isActive) public virtual onlyOwner {
         isKeeper[_account] = _isActive;
     }
 
-    function setOrderBook(address _orderBook) external onlyOwner {
+    function setOrderBook(address _orderBook) public virtual onlyOwner {
         orderBook = _orderBook;
     }
 
-    function setMaxGlobalSizes(address[] memory _tokens, uint256[] memory _longSizes, uint256[] memory _shortSizes) external onlyOwner {
+    function setMaxGlobalSizes(address[] memory _tokens, uint256[] memory _longSizes, uint256[] memory _shortSizes) public virtual onlyOwner {
         for (uint256 i = 0; i < _tokens.length; i++) {
             address token = _tokens[i];
             maxGlobalLongSizes[token] = _longSizes[i];
@@ -256,7 +256,7 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         }
     }
 
-    function setMinLiquidationFee(uint256 _minLiquidationFee) external onlyOwner {
+    function setMinLiquidationFee(uint256 _minLiquidationFee) public virtual onlyOwner {
         minLiquidationFee = _minLiquidationFee;
     }
 

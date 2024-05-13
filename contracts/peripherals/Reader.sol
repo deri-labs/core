@@ -89,7 +89,7 @@ contract Reader {
         address payable _orderBookAddress,
         address _account,
         uint256[] memory _indices
-    ) external view returns (uint256[] memory, address[] memory) {
+    ) public view returns (uint256[] memory, address[] memory) {
         Vars memory vars = Vars(0, 0, _account, 5, 3);
 
         uint256[] memory uintProps = new uint256[](vars.uintLength * _indices.length);
@@ -130,7 +130,7 @@ contract Reader {
         address payable _orderBookAddress,
         address _account,
         uint256[] memory _indices
-    ) external view returns (uint256[] memory, address[] memory) {
+    ) public view returns (uint256[] memory, address[] memory) {
         Vars memory vars = Vars(0, 0, _account, 5, 2);
 
         uint256[] memory uintProps = new uint256[](vars.uintLength * _indices.length);

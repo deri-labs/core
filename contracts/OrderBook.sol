@@ -37,7 +37,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         bool _isLong,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) external payable nonReentrant {
+    ) public virtual payable nonReentrant {
         require(msg.value >= minExecutionFee, "OrderBook: insufficient execution fee");
         IERC20(_collateralToken).transferFrom(msg.sender, address(this), _collateralDelta);
         uint256 _orderIndex = increaseOrdersIndex[msg.sender];
@@ -74,7 +74,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         uint256 _sizeDelta,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) external nonReentrant {
+    ) public virtual nonReentrant {
         DataTypes.IncreaseOrder storage order = increaseOrders[msg.sender][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
 
@@ -94,7 +94,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function cancelIncreaseOrder(uint256 _orderIndex) public nonReentrant {
+    function cancelIncreaseOrder(uint256 _orderIndex) public virtual nonReentrant {
         DataTypes.IncreaseOrder memory order = increaseOrders[msg.sender][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
         delete increaseOrders[msg.sender][_orderIndex];
@@ -114,7 +114,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function executeIncreaseOrder(address _address, uint256 _orderIndex, address payable _feeReceiver) override external nonReentrant {
+    function executeIncreaseOrder(address _address, uint256 _orderIndex, address payable _feeReceiver) override public virtual nonReentrant {
         DataTypes.IncreaseOrder memory order = increaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
         // increase long should use max price
@@ -154,7 +154,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         bool _isLong,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) external payable nonReentrant {
+    ) public virtual payable nonReentrant {
         require(msg.value >= minExecutionFee, "OrderBook: insufficient fee");
         uint256 _orderIndex = decreaseOrdersIndex[msg.sender];
         DataTypes.DecreaseOrder memory order = DataTypes.DecreaseOrder(
@@ -191,7 +191,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         uint256 _sizeDelta,
         uint256 _triggerPrice,
         bool _triggerAboveThreshold
-    ) external nonReentrant {
+    ) public virtual nonReentrant {
         DataTypes.DecreaseOrder storage order = decreaseOrders[msg.sender][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
         order.triggerPrice = _triggerPrice;
@@ -212,7 +212,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function cancelDecreaseOrder(uint256 _orderIndex) public nonReentrant {
+    function cancelDecreaseOrder(uint256 _orderIndex) public virtual nonReentrant {
         DataTypes.DecreaseOrder memory order = decreaseOrders[msg.sender][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
         delete decreaseOrders[msg.sender][_orderIndex];
@@ -231,7 +231,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function executeDecreaseOrder(address _address, uint256 _orderIndex, address payable _feeReceiver) override external nonReentrant {
+    function executeDecreaseOrder(address _address, uint256 _orderIndex, address payable _feeReceiver) override public virtual nonReentrant {
         DataTypes.DecreaseOrder memory order = decreaseOrders[_address][_orderIndex];
         require(order.account != address(0), "OrderBook: non-existent order");
         // decrease long should use min price
@@ -273,7 +273,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function cancelMultiple(uint256[] memory _increaseOrderIndexes, uint256[] memory _decreaseOrderIndexes) external {
+    function cancelMultiple(uint256[] memory _increaseOrderIndexes, uint256[] memory _decreaseOrderIndexes) public virtual {
         for (uint256 i = 0; i < _increaseOrderIndexes.length; i++) {
             cancelIncreaseOrder(_increaseOrderIndexes[i]);
         }
@@ -287,7 +287,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         require(sent, "OrderBook: failed to send ETH");
     }
 
-    function getIncreaseOrder(address _account, uint256 _orderIndex) override public view returns (
+    function getIncreaseOrder(address _account, uint256 _orderIndex) override public virtual view returns (
         uint256 collateralDelta,
         address collateralToken,
         address indexToken,
@@ -310,7 +310,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         );
     }
 
-    function getDecreaseOrder(address _account, uint256 _orderIndex) override public view returns (
+    function getDecreaseOrder(address _account, uint256 _orderIndex) override public virtual view returns (
         address collateralToken,
         uint256 collateralDelta,
         address indexToken,
@@ -347,7 +347,7 @@ contract OrderBook is ReentrancyGuard, IOrderBook, Ownable {
         return (currentPrice, isPriceValid);
     }
 
-    function setMinExecutionFee(uint256 _minExecutionFee) external onlyOwner {
+    function setMinExecutionFee(uint256 _minExecutionFee) public virtual onlyOwner {
         minExecutionFee = _minExecutionFee;
     }
 
