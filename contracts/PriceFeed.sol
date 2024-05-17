@@ -15,8 +15,8 @@ contract PriceFeed is IPriceFeed, Ownable {
     mapping(address => bytes32) public feedIds;
     mapping(address => bool) public isStableToken;
 
-    constructor() {
-        validTime = 3 seconds;
+    constructor(uint256 _validTime) {
+        validTime = _validTime;
     }
 
     function getPrice(address _token, bool _maximise, bool _fresh) public virtual override view returns (uint256) {

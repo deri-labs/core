@@ -518,8 +518,10 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         collateralTokens[_token] = _isCollateral;
     }
 
-    function setIndexToken(address _token, bool _isIndex) public virtual onlyOwner {
-        indexTokens[_token] = _isIndex;
+    function setIndexTokens(address[] calldata _tokens, bool[] calldata _isIndex) public virtual onlyOwner {
+        require(_tokens.length == _isIndex.length, "Vault: invalid params");
+        for (uint256 i = 0; i < _tokens.length; i++)
+            indexTokens[_tokens[i]] = _isIndex[i];
     }
 
     function setEquityToken(address _token, bool _isEquity) public virtual onlyOwner {

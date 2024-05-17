@@ -240,8 +240,10 @@ contract PositionManager is IPositionManager, ReentrancyGuard, Ownable {
         require(sent, "PositionManager: failed to transfer out ether");
     }
 
-    function setKeeper(address _account, bool _isActive) public virtual onlyOwner {
-        isKeeper[_account] = _isActive;
+    function setKeepers(address[] calldata _keepers, bool[] calldata _states) public virtual onlyOwner {
+        for (uint256 i = 0; i < _keepers.length; i++) {
+            isKeeper[_keepers[i]] = _states[i];
+        }
     }
 
     function setOrderBook(address _orderBook) public virtual onlyOwner {
