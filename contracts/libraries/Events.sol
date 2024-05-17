@@ -62,7 +62,7 @@ library Events {
         int256 realisedPnl
     );
 
-    event UpdateVaultPnl(address token, int256 realisedPnl);
+    event UpdateTokenPnl(address token, int256 realisedPnl);
     event UpdateFundingRate(bool isLong, uint256 fundingRate);
     event UpdatePnl(bytes32 key, bool hasProfit, uint256 delta);
     event Withdraw(address _token, uint256 _amount, address _receiver);

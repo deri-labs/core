@@ -10,35 +10,37 @@ import "./libraries/DataTypes.sol";
 import "./libraries/Events.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IPriceFeed.sol";
+import "./interfaces/ILPool.sol";
 
 contract Vault is IVault, ReentrancyGuard, Ownable {
 
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public override priceFeed;
-    mapping(bool => uint256) public override fundingRates;  // isLong => rate
-    mapping(bool => uint256) public override cumulativeFundingRates;
-    mapping(bool => uint256) public override lastFundingTimes;
-
-    mapping(bytes32 => DataTypes.Position) public positions;
-    mapping(address => uint256) public override globalLongSizes;
-    mapping(address => uint256) public override globalShortSizes;
-    mapping(address => bool) public override collateralTokens;
-    mapping(address => bool) public override indexTokens;
-    mapping(address => bool) public override equityTokens;
-    mapping(address => bool) public override isManager;
-
-    uint256 public override maxLeverage;
-    uint256 public override marginFeeBasisPoints;
-    uint256 public override fundingInterval = 1 hours;
+    address public usdToken;
+    address public priceFeed;
+    uint256 public maxLeverage;
+    uint256 public marginFeeBasisPoints;
+    uint256 public fundingInterval = 1 hours;
     uint256 public override minProfitTime;
     uint256 public override minProfitBasisPoints;
 
-    uint256 public override vaultFee;
+    mapping(bool => uint256) public override fundingRates;  // isLong => rate
+    mapping(bool => uint256) public override cumulativeFundingRates;
+    mapping(bool => uint256) public lastFundingTimes;
+    mapping(address => bool) public isManager;
+    mapping(bytes32 => DataTypes.Position) public positions;
+    mapping(address => uint256) public override globalLongSizes;
+    mapping(address => uint256) public override globalShortSizes;
+    mapping(address => bool) public collateralTokens;
+    mapping(address => bool) public indexTokens;
+    mapping(address => bool) public equityTokens;
+
+    uint256 public vaultFee;
+    uint256 public collectedFee;
     mapping(address => uint256) public tradingPoints; // account => points
-    int256 public override vaultPnl;
-    mapping(address => int256) public tokenPnl; // token => pnl
+    mapping(address => address) public lPools;
+    mapping(address => int256) public collectedTokenPnl; // token => pnl
 
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant FUNDING_RATE_PRECISION = 1000000;
@@ -327,9 +329,20 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
     }
 
     function _updatePnl(address _indexToken, int256 _realisedPnl) internal {
-        tokenPnl[_indexToken] -= _realisedPnl;
-        vaultPnl -= _realisedPnl;
-        emit Events.UpdateVaultPnl(_indexToken, - _realisedPnl);
+        if (_realisedPnl == 0) return;
+        collectedTokenPnl[_indexToken] -= _realisedPnl;
+        if (_realisedPnl > 0) {
+            uint256 _amount = _toUsdToken(usdToken, uint256(_realisedPnl));
+            ILPool(lPools[_indexToken]).transfer(usdToken, _amount, address(this));
+        } else {
+            uint256 _amount = _toUsdToken(usdToken, uint256(- _realisedPnl));
+            _transferOut(usdToken, _amount, lPools[_indexToken]);
+        }
+        emit Events.UpdateTokenPnl(_indexToken, - _realisedPnl);
+    }
+
+    function _toUsdToken(address _token, uint256 _amount) internal view returns (uint256) {
+        return _amount / (10 ** (30 - IERC20Metadata(_token).decimals()));
     }
 
     function _transferOut(address _token, uint256 _amount, address _receiver) internal {
@@ -439,7 +452,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         uint256 _averagePrice,
         bool _isLong,
         uint256 _lastIncreasedTime
-    ) public virtual override view returns (bool, uint256) {
+    ) public virtual view returns (bool, uint256) {
         require(_averagePrice > 0, "Vault: invalid _averagePrice");
         uint256 price = _isLong ? getMinPrice(_indexToken) : getMaxPrice(_indexToken);
         uint256 priceDelta = _averagePrice > price ? _averagePrice.sub(price) : price.sub(_averagePrice);
@@ -472,15 +485,15 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         return _sizeDelta.mul(marginFeeBasisPoints).div(BASIS_POINTS_DIVISOR);
     }
 
-    function setManager(address _manager, bool _isManager) public virtual override onlyOwner {
+    function setManager(address _manager, bool _isManager) public virtual onlyOwner {
         isManager[_manager] = _isManager;
     }
 
-    function setPriceFeed(address _priceFeed) public virtual override onlyOwner {
+    function setPriceFeed(address _priceFeed) public virtual onlyOwner {
         priceFeed = _priceFeed;
     }
 
-    function setMaxLeverage(uint256 _maxLeverage) public virtual override onlyOwner {
+    function setMaxLeverage(uint256 _maxLeverage) public virtual onlyOwner {
         require(_maxLeverage > 10000, "Vault: invalid _maxLeverage");
         maxLeverage = _maxLeverage;
     }
@@ -495,7 +508,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         minProfitTime = _minProfitTime;
     }
 
-    function setFundingRate(uint256 _fundingInterval, uint256 _longFundingRate, uint256 _shortFundingRate) public virtual override onlyOwner {
+    function setFundingRate(uint256 _fundingInterval, uint256 _longFundingRate, uint256 _shortFundingRate) public virtual onlyOwner {
         fundingInterval = _fundingInterval;
         fundingRates[true] = _longFundingRate;
         fundingRates[false] = _shortFundingRate;
@@ -513,17 +526,28 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         equityTokens[_token] = _isEquity;
     }
 
-    function withdraw(address _token, address _receiver, uint256 _amount) public virtual override onlyManager {
-        _transferOut(_token, _amount, _receiver);
-        emit Events.Withdraw(_token, _amount, _receiver);
+    function setLPools(address[] calldata _indexTokens, address[] calldata _lPools) public virtual onlyOwner {
+        require(_indexTokens.length == _lPools.length, "Vault: invalid params");
+        for (uint256 i = 0; i < _indexTokens.length; i++)
+            lPools[_indexTokens[i]] = _lPools[i];
     }
 
-    function feeCallback() public virtual onlyManager {
+    function setUsdToken(address _usdToken) public virtual onlyOwner {
+        usdToken = _usdToken;
+    }
+
+    function distributeFee(address[] calldata receivers, uint256[] calldata ratios) public virtual onlyOwner {
+        require(receivers.length == ratios.length, "Vault: invalid params");
+
+        uint256 _totalRatio;
+        uint256 _amount = _toUsdToken(usdToken, vaultFee);
+        for (uint256 i = 0; i < ratios.length; i++) {
+            _totalRatio += ratios[i];
+            IERC20(usdToken).transfer(receivers[i], _amount * ratios[i] / 10000);
+        }
+        require(_totalRatio == 10000, "FeeManager: invalid ratios");
+        collectedFee += vaultFee;
         vaultFee = 0;
-    }
-
-    function pnlCallback() public virtual onlyManager {
-        vaultPnl = 0;
     }
 
 }
