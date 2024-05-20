@@ -37,8 +37,8 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
     mapping(address => bool) public equityTokens;
 
     uint256 public vaultFee;
-    uint256 public collectedFee;
     mapping(address => uint256) public tradingPoints; // account => points
+    mapping(address => uint256) public collectedTokenFees;
     mapping(address => address) public lPools;
     mapping(address => int256) public collectedTokenPnl; // token => pnl
 
@@ -95,7 +95,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         if (position.size > 0 && _sizeDelta > 0)
             position.averagePrice = getNextAveragePrice(_indexToken, position.size, position.averagePrice, _isLong, price, _sizeDelta, position.lastIncreasedTime);
 
-        uint256 fee = _collectMarginFees(_account, _isLong, _sizeDelta, position.size, position.entryFundingRate);
+        uint256 fee = _collectMarginFees(_account, _indexToken, _isLong, _sizeDelta, position.size, position.entryFundingRate);
         uint256 collateralDeltaUsd = tokenToUsd(_collateralToken, _collateralDelta);
         position.collateral = position.collateral.add(collateralDeltaUsd);
         require(position.collateral >= fee, "Vault: insufficient collateral for fees");
@@ -161,7 +161,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
             return _decreasePosition(_account, _collateralToken, _indexToken, 0, position.size, _isLong, msg.sender);  // liq
         }
         position.realisedPnl += _userDelta;
-        _collectFeeAndPoints(_account, marginFees);
+        _collectFeeAndPoints(_account, _indexToken, marginFees);
         uint256 markPrice = _isLong ? getMinPrice(_indexToken) : getMaxPrice(_indexToken);
         emit Events.LiquidatePosition(key, _account, _collateralToken, _indexToken, _isLong, position.size, position.collateral, position.reserveAmount, position.realisedPnl, markPrice);
         if (_isLong) {
@@ -274,7 +274,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
 
         bytes32 key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         DataTypes.Position storage position = positions[key];
-        uint256 fee = _collectMarginFees(_account, _isLong, _sizeDelta, position.size, position.entryFundingRate);
+        uint256 fee = _collectMarginFees(_account, _indexToken, _isLong, _sizeDelta, position.size, position.entryFundingRate);
         bool hasProfit;
         uint256 adjustedDelta;
         {
@@ -311,6 +311,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
 
     function _collectMarginFees(
         address _account,
+        address _indexToken,
         bool _isLong,
         uint256 _sizeDelta,
         uint256 _size,
@@ -319,13 +320,14 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         uint256 feeUsd = getPositionFee(_sizeDelta);
         uint256 fundingFee = getFundingFee(_isLong, _size, _entryFundingRate);
         feeUsd = feeUsd.add(fundingFee);
-        _collectFeeAndPoints(_account, feeUsd);
+        _collectFeeAndPoints(_account, _indexToken, feeUsd);
         return feeUsd;
     }
 
-    function _collectFeeAndPoints(address _account, uint256 _fee) internal {
-        vaultFee = vaultFee.add(_fee);
-        tradingPoints[_account] = tradingPoints[_account].add(_fee);
+    function _collectFeeAndPoints(address _account, address _indexToken, uint256 _fee) internal {
+        vaultFee = vaultFee += _fee;
+        tradingPoints[_account] += _fee;
+        collectedTokenFees[_indexToken] += _fee;
     }
 
     function _updatePnl(address _indexToken, int256 _realisedPnl) internal {
@@ -548,7 +550,6 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
             IERC20(usdToken).transfer(receivers[i], _amount * ratios[i] / 10000);
         }
         require(_totalRatio == 10000, "FeeManager: invalid ratios");
-        collectedFee += vaultFee;
         vaultFee = 0;
     }
 

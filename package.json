@@ -1,12 +1,12 @@
 {
   "name": "@deri-labs/core",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "",
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test --deploy-fixture",
-    "coverage": "hardhat test && hardhat coverage --solcoverjs .solcover.ts --show-stack-traces"
+    "co": "hardhat coverage --solcoverjs .solcover.ts --show-stack-traces"
   },
   "keywords": [],
   "author": "",
