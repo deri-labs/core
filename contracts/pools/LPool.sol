@@ -71,7 +71,9 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
     function lpPrice() public virtual view returns (uint256) {
         uint256 _aum = aum();
         if (_aum == 0) return 10 ** 8;
-        return aum() * 10 ** 8 / lpToken.totalSupply(); // d8
+        uint256 _totalSupply = lpToken.totalSupply();
+        if (_totalSupply == 0) return 10 ** 8;
+        return aum() * 10 ** 8 / _totalSupply; // d8
     }
 
     function setWhitelistToken(address _token, bool _enabled) public virtual onlyOwner {
