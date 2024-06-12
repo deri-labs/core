@@ -62,6 +62,8 @@ library Events {
         int256 realisedPnl
     );
 
+    event Increase(address token, address from, address to, uint256 amount);
+    event Decrease(address token, address from, address to, uint256 amount);
     event UpdateTokenPnl(address token, int256 realisedPnl);
     event UpdateFundingRate(bool isLong, uint256 fundingRate);
     event UpdatePnl(bytes32 key, bool hasProfit, uint256 delta);

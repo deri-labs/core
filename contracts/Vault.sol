@@ -115,6 +115,8 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         }
         emit Events.IncreasePosition(key, _account, _collateralToken, _indexToken, collateralDeltaUsd, _sizeDelta, _isLong, price, fee);
         emit Events.UpdatePosition(key, position.size, position.collateral, position.averagePrice, position.entryFundingRate, position.reserveAmount, position.realisedPnl, price);
+        if (_collateralDelta > 0)
+            emit Events.Increase(_collateralToken, _account, address(this), _collateralDelta);
     }
 
     /**
@@ -258,6 +260,7 @@ contract Vault is IVault, ReentrancyGuard, Ownable {
         if (usdOut > 0) {
             uint256 amountOutAfterFees = usdToToken(_collateralToken, usdOutAfterFee);
             _transferOut(_collateralToken, amountOutAfterFees, _receiver);
+            emit Events.Decrease(_collateralToken, address(this), _account, amountOutAfterFees);
             return amountOutAfterFees;
         }
         return 0;
