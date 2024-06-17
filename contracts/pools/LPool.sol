@@ -34,10 +34,10 @@ contract LPool is ReentrancyGuard, Pausable, Ownable {
         require(_amountIn > 0, "LPool: amount must be greater than zero");
         require(whitelistTokens[_tokenIn], "LPool: token not in whitelist");
 
-        IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
-
         uint256 _aum = aum();
         uint256 _totalSupply = lpToken.totalSupply();
+        IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+
         uint256 _amountD18 = _toD18(_tokenIn, _amountIn);
         _amountD18 = _aum == 0 || _totalSupply == 0 ? _amountD18 : _amountD18 * _totalSupply / _aum;
         require(lpToken.totalSupply() + _amountD18 <= cap, "LPool: cap exceeded");
